@@ -22,6 +22,9 @@ struct VistaRestApp: App {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "sun.horizon.fill")
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(.primary)
+                    .font(.system(size: 16, weight: .regular))
                 if model.preferences.showRemainingInMenuBar && model.state.phase != .idle {
                     Text(model.formattedRemaining)
                         .font(.system(.body, design: .monospaced))

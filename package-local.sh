@@ -2,13 +2,16 @@
 
 set -euo pipefail
 
-app_version="0.1.0"
+app_version="0.1.5"
 architecture="$(rtk uname -m)"
 app_dir=".build/VistaRest.app"
 contents_dir="$app_dir/Contents"
 dist_dir="dist"
 dmg_path="$dist_dir/VistaRest-$app_version-macOS-$architecture.dmg"
 zip_path="$dist_dir/VistaRest-$app_version-macOS-$architecture.zip"
+staging_dir="$(rtk mktemp -d ".build/VistaRest-dmg-stage.XXXXXX")"
+
+trap 'rtk rm -rf "$staging_dir"' EXIT
 
 rtk swift build -c release
 build_dir="$(rtk swift build -c release --show-bin-path)"
@@ -17,15 +20,18 @@ rtk mkdir -p "$contents_dir/MacOS" "$dist_dir"
 rtk cp "$build_dir/VistaRest" "$contents_dir/MacOS/VistaRest"
 rtk cp Info.plist "$contents_dir/Info.plist"
 rtk chmod +x "$contents_dir/MacOS/VistaRest"
+rtk ./make-app-icon.sh "$contents_dir"
 
 # 本地 ad-hoc 签名足够用于这台 Mac 的安装测试，不代表 App Store 发布签名。
 rtk codesign --force --deep --sign - "$app_dir"
 rtk codesign --verify --deep --strict "$app_dir"
 
 rtk rm -f "$dmg_path" "$zip_path"
+rtk ditto "$app_dir" "$staging_dir/VistaRest.app"
+rtk ln -s /Applications "$staging_dir/Applications"
 rtk hdiutil create \
     -volname "远眺" \
-    -srcfolder "$app_dir" \
+    -srcfolder "$staging_dir" \
     -ov \
     -format UDZO \
     "$dmg_path"
